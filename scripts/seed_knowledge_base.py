@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from app import db
+from app.clients import db
 
 
 def parse(path: Path) -> list[tuple[str, str, str]]:
