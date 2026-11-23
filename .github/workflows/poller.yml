@@ -1,0 +1,33 @@
+name: Scheduled Poller
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'   # runs every 15 minutes
+  workflow_dispatch:          # lets you run it manually too
+
+jobs:
+  poll:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync --locked --no-dev
+
+      - name: Run poller once
+        run: uv run python -c "from app.poller import poll_once; print(f'Processed {poll_once()} messages')"
+        env:
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          GOOGLE_REFRESH_TOKEN: ${{ secrets.GOOGLE_REFRESH_TOKEN }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+          POLL_INTERVAL_SECONDS: "60"
+          DASHBOARD_USERNAME: "admin"
+          DASHBOARD_PASSWORD: ${{ secrets.DASHBOARD_PASSWORD }}
+          PYDANTIC_AI_NO_BANNER: "1"
