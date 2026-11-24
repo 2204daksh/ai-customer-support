@@ -9,26 +9,26 @@ from app.services.pipeline import handle_message
 
 setup_logging(level=logging.INFO)
 
+# Limit concurrent worker threads so LLM calls don't all fire at once.
+MAX_CONCURRENT_WORKERS = 2
 
-# How many messages are processed at the same time.
-# Each message waits on the Gmail API and the database, so threads let us
-# overlap those waits instead of doing them one after another.
-MAX_CONCURRENT_WORKERS = 5
+# Stagger message submissions so LLM calls are spread out over time instead of all hitting the API in the first second.
+SUBMIT_DELAY_SECONDS = 2.0
 
 
 def poll_once() -> int:
     gmail = Gmail()
     message_ids = gmail.list_new_message_ids()
 
-    # Submit every message to a worker thread so they run concurrently.
+    # Submit every message to a worker thread with a small delay between
+    # submissions so LLM calls are spaced out and don't exceed the API rate limit.
     with ThreadPoolExecutor(max_workers=MAX_CONCURRENT_WORKERS) as thread_pool:
         submitted_tasks = []
         for message_id in message_ids:
             submitted_task = thread_pool.submit(handle_message, gmail, message_id)
             submitted_tasks.append(submitted_task)
+            time.sleep(SUBMIT_DELAY_SECONDS)
 
-        # Wait for every thread to finish, errors are surfaced by the decorated
-        # DB/LLM calls inside handle_message.
         for submitted_task in as_completed(submitted_tasks):
             try:
                 submitted_task.result()

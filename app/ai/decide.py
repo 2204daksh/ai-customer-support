@@ -26,7 +26,7 @@ def decide(thread: str, has_attachments: bool = False) -> Decision:
     answer = write_reply(thread, classification.section)
     if answer.action == "escalate":
         return _escalate(classification, answer.reasoning)
-    if not answer.enough_information:
+    if not answer.enough_information and answer.action == "escalate":
         return _escalate(classification, "The knowledge base does not answer this")
     if answer.issue:
         step = resolve_issue(answer.issue)
@@ -36,7 +36,7 @@ def decide(thread: str, has_attachments: bool = False) -> Decision:
         return _escalate(classification, "The reply promises an action")
 
     return Decision(
-        action="reply",
+        action=answer.action,
         section=classification.section,
         reply=answer.reply,
         reason=answer.reasoning,
