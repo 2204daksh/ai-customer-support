@@ -2,7 +2,7 @@ import re
 
 from pydantic_ai import Agent, ModelRetry, RunContext
 
-from app.repo import repository as db
+from app.repo import repository as repo
 from app.ai.schemas import AgentReply
 from app.core.config import settings
 from app.core.logger import logging_llm_call
@@ -58,13 +58,13 @@ support_agent = Agent(
 @support_agent.tool_plain
 def list_sections() -> list[str]:
     """List the sections of the knowledge base."""
-    return db.list_sections()
+    return repo.list_sections()
 
 
 @support_agent.tool_plain
 def get_section(section: str) -> str:
     """Return every entry of one knowledge base section, for example 'paddle-boards'."""
-    sections = db.get_section(section)
+    sections = repo.get_section(section)
     if not sections:
         raise ModelRetry(f"There is no section '{section}'. Call list_sections to see the options.")
     return "\n\n".join(f"## {section['title']}\n{section['content']}" for section in sections)

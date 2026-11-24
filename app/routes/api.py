@@ -1,12 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
-from app.service.auth import require_login
-from app.service.knowledge_service import list_knowledge_base, update_knowledge_base_entry
-from app.service.poll_service import poll_messages
-from app.service.ticket_service import list_events, list_messages, list_tickets
+from app.service import auth, knowledge_service, poll_service, ticket_service
 
-api = APIRouter(prefix="/api", dependencies=[Depends(require_login)])
+api = APIRouter(prefix="/api", dependencies=[Depends(auth.require_login)])
 
 
 class EntryUpdate(BaseModel):
@@ -21,27 +18,27 @@ def login() -> dict:
 
 @api.get("/events")
 def events() -> list[dict]:
-    return list_events()
+    return ticket_service.list_events()
 
 
 @api.get("/tickets")
 def tickets() -> list[dict]:
-    return list_tickets()
+    return ticket_service.list_tickets()
 
 
 @api.get("/tickets/{ticket_id}/messages")
 def ticket_messages(ticket_id: int) -> list[dict]:
-    return list_messages(ticket_id)
+    return ticket_service.list_messages(ticket_id)
 
 
 @api.get("/knowledge-base")
 def knowledge_base() -> list[dict]:
-    return list_knowledge_base()
+    return knowledge_service.list_knowledge_base()
 
 
 @api.put("/knowledge-base/{entry_id}")
 def update_entry(entry_id: int, update: EntryUpdate) -> dict:
-    entry = update_knowledge_base_entry(entry_id, update.title, update.content)
+    entry = knowledge_service.update_knowledge_base_entry(entry_id, update.title, update.content)
     if entry is None:
         raise HTTPException(status_code=404, detail="Entry not found")
     return entry
@@ -49,4 +46,4 @@ def update_entry(entry_id: int, update: EntryUpdate) -> dict:
 
 @api.post("/poll")
 def poll() -> dict:
-    return poll_messages()
+    return poll_service.run_poll()

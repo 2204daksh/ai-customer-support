@@ -17,6 +17,8 @@ class Settings(BaseSettings):
     poll_interval_seconds: int = 60
     dashboard_username: str = "admin"
     dashboard_password: str = ""
+    github_token: str = ""
+    github_repo: str = ""
 
 
 settings = Settings()

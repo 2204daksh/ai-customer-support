@@ -3,7 +3,7 @@ from email.utils import parseaddr
 
 from pydantic_ai.exceptions import ModelUnavailableError
 
-from app.repo import repository as db
+from app.repo import repository as repo
 from app.ai.decide import decide
 from app.clients.gmail import (
     ESCALATED_LABEL,
@@ -20,7 +20,7 @@ MAX_ATTEMPTS = 1
 
 
 def handle_message(gmail: Gmail, message_id: str) -> None:
-    event = db.start_event(message_id)
+    event = repo.start_event(message_id)
     if event is None:
         gmail.add_label(message_id, PROCESSED_LABEL)
         return
@@ -28,9 +28,9 @@ def handle_message(gmail: Gmail, message_id: str) -> None:
         status, result = process(gmail, message_id)
         if status == "processed":
             gmail.add_label(message_id, PROCESSED_LABEL)
-        db.finish_event(event["id"], status, result)
+        repo.finish_event(event["id"], status, result)
     except Exception as error:
-        db.fail_event(event["id"], str(error))
+        repo.fail_event(event["id"], str(error))
         if event["attempts"] >= MAX_ATTEMPTS:
             gmail.add_label(message_id, PROCESSED_LABEL)
         raise
@@ -45,8 +45,8 @@ def process(gmail: Gmail, message_id: str) -> tuple[str, dict]:
         return "skipped", {"reason": reason}
 
     sender = parseaddr(headers.get("from", ""))[1]
-    ticket_id = db.upsert_ticket(message["threadId"], sender, headers.get("subject", ""))
-    db.save_message(ticket_id, message_id, "in", sender, get_body(message))
+    ticket_id = repo.upsert_ticket(message["threadId"], sender, headers.get("subject", ""))
+    repo.save_message(ticket_id, message_id, "in", sender, get_body(message))
 
     thread = gmail.get_thread(message["threadId"])
     if gmail.is_escalated(thread):
@@ -68,10 +68,10 @@ def process(gmail: Gmail, message_id: str) -> tuple[str, dict]:
         return "skipped", {"reason": "llm_unavailable", "error": str(last_model_error)}
 
     sent = gmail.send_reply(message, ai_decision.reply)
-    db.save_message(ticket_id, sent["id"], "out", gmail.address, ai_decision.reply)
+    repo.save_message(ticket_id, sent["id"], "out", gmail.address, ai_decision.reply)
     if ai_decision.action == "escalate":
         gmail.add_label(message_id, ESCALATED_LABEL)
-        db.update_ticket(ticket_id, "escalated", ai_decision.section, ai_decision.proposed_action)
+        repo.update_ticket(ticket_id, "escalated", ai_decision.section, ai_decision.proposed_action)
     else:
-        db.update_ticket(ticket_id, "answered", ai_decision.section)
+        repo.update_ticket(ticket_id, "answered", ai_decision.section)
     return "processed", ai_decision.model_dump()
