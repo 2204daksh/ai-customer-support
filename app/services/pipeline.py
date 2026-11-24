@@ -3,7 +3,7 @@ from email.utils import parseaddr
 
 from pydantic_ai.exceptions import ModelUnavailableError
 
-from app.clients import db
+from app.repo import repository as db
 from app.ai.decide import decide
 from app.clients.gmail import (
     ESCALATED_LABEL,

@@ -2,7 +2,7 @@ import re
 
 from pydantic_ai import Agent, ModelRetry, RunContext
 
-from app.clients import db
+from app.repo import repository as db
 from app.ai.schemas import AgentReply
 from app.core.config import settings
 from app.core.logger import logging_llm_call
