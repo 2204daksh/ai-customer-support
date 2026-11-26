@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
-from app.service import auth, knowledge_service, poll_service, ticket_service
+from app.service import auth, knowledge_service, metric_service, poll_service, ticket_service
 
 api = APIRouter(prefix="/api", dependencies=[Depends(auth.require_login)])
 
@@ -47,3 +47,8 @@ def update_entry(entry_id: int, update: EntryUpdate) -> dict:
 @api.post("/poll")
 def poll() -> dict:
     return poll_service.run_poll()
+
+
+@api.get("/metrics")
+def metrics() -> dict:
+    return metric_service.get_metrics()

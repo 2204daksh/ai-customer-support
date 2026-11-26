@@ -140,3 +140,45 @@ def update_knowledge_base_entry(entry_id: int, title: str, content: str) -> dict
             """,
             (title, content, entry_id),
         ).fetchone()
+
+
+@logging_db_call
+def list_metrics() -> dict:
+    with connect() as conn:
+        row = conn.execute(
+            """
+            select
+                count(id) as total_events,
+                count(id) filter (where status = 'processed') as processed_events,
+                count(id) filter (where status = 'failed') as failed_events,
+                count(id) filter (where status = 'skipped') as skipped_events,
+                (select count(id) from messages where direction = 'out') as outbound_messages,
+                (select count(id) from messages where direction = 'in') as inbound_messages,
+                (select count(id) from tickets) as total_tickets,
+                (select count(id) from tickets where status = 'escalated') as escalated_tickets
+            from events
+            """
+        ).fetchone()
+
+        total_events = int(row["total_events"])
+        processed_events = int(row["processed_events"])
+        failed_events = int(row["failed_events"])
+        skipped_events = int(row["skipped_events"])
+        outbound_messages = int(row["outbound_messages"])
+        inbound_messages = int(row["inbound_messages"])
+        total_tickets = int(row["total_tickets"])
+        escalated_tickets = int(row["escalated_tickets"])
+
+        reply_rate = round((processed_events / inbound_messages) * 100, 1) if inbound_messages else 0.0
+
+        return {
+            "processed_messages": processed_events,
+            "ai_reply_rate": reply_rate,
+            "active_ai_agents": escalated_tickets,
+            "total_events": total_events,
+            "failed_events": failed_events,
+            "skipped_events": skipped_events,
+            "outbound_messages": outbound_messages,
+            "inbound_messages": inbound_messages,
+            "total_tickets": total_tickets,
+        }
